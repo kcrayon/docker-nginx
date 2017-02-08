@@ -1,0 +1,23 @@
+<% containers = images["my-image-name"][:containers] %>
+
+upstream my_service {
+  <% containers.each do |container| %>
+    server <%= container[:ipaddr] %>:<%= container[:port] %> weight=<%= container[:weight] %>;
+  <% end %>
+  check interval=1000 fall=5 rise=3 timeout=500 type=http port=80;
+  check_keepalive_requests 100;
+  check_http_send "GET / HTTP/1.0\r\n\r\n";
+  check_http_expect_alive http_2xx;
+}
+
+server {
+  listen 80;
+  location / {
+    proxy_pass http://my_service;
+    access_log off;
+  }
+  location /_nginx-check_status {
+    check_status;
+    access_log off;
+  }
+}
